@@ -1,0 +1,57 @@
+version: '3'
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_DB: "app"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    expose:
+      - '5432'
+    networks:
+      - postgres-compose-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "postgres@email.com"
+      PGADMIN_DEFAULT_PASSWORD: "postgres"
+    ports:
+      - "15432:80"
+    expose:
+      - '15432'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - postgres-compose-network
+
+  app:
+    image: 'app:latest'
+    restart: always
+    build:
+      context: .
+    environment:
+      DATASOURCE_URL: jdbc:postgresql://db:5432/app?createDatabaseIfNotExist=true&useTimezone=true&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true&useSSL=false
+      DATASOURCE_USER: postgres
+      DATASOURCE_PASS: postgres
+    ports:
+      - "8089:8089"
+    expose:
+      - '8089'
+    depends_on:
+      - db
+    networks:
+      - postgres-compose-network
+
+networks:
+  postgres-compose-network:
+    driver: bridge
